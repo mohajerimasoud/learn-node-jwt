@@ -24,13 +24,13 @@ router.post("/register", async (req, res, next) => {
 
     if (!email || !password) {
       res.status(400);
-      throw new Error("You must provide an email and a password.");
+      console.log("You must provide an email and a password.");
     }
     const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
       res.status(400);
-      throw new Error("Email already in use.");
+      console.log("Email already in use.");
     }
 
     const user = await createUserByEmailAndPassword({ email, password });
@@ -40,7 +40,7 @@ router.post("/register", async (req, res, next) => {
     const { accessToken, refreshToken } = generateTokens(user, jti);
     await addRefreshTokenToWhitelist({ jti, refreshToken, userId: user.id });
 
-    res.json({
+    res.status(200).json({
       accessToken,
       refreshToken,
     });
@@ -56,7 +56,7 @@ router.post("/login", async (req, res, next) => {
     const { email, password } = req.body;
     if (!email || !password) {
       res.status(400);
-      throw new Error("You must provide an email and a password.");
+      console.log("You must provide an email and a password.");
     }
 
     const existingUser = await findUserByEmail(email);
@@ -68,7 +68,7 @@ router.post("/login", async (req, res, next) => {
     const validPassword = await bcrypt.compare(password, existingUser.password);
     if (!validPassword) {
       res.status(403);
-      throw new Error("Invalid login credentials.");
+      console.log("Invalid login credentials.");
     }
 
     const jti = uuidv4();
@@ -79,13 +79,14 @@ router.post("/login", async (req, res, next) => {
       userId: existingUser.id,
     });
 
-    res.json({
+    res.status(200).json({
       accessToken,
       refreshToken,
     });
   } catch (err) {
-    next(err);
-  }
+    console.log("error in login",err);
+
+    res.status(400).json({ message: "error", error });  }
 });
 
 router.post("/refreshToken", async (req, res, next) => {
@@ -93,7 +94,7 @@ router.post("/refreshToken", async (req, res, next) => {
     const { refreshToken } = req.body;
     if (!refreshToken) {
       res.status(400);
-      throw new Error("Missing refresh token.");
+      console.log("Missing refresh token.");
     }
     const payload = jwt.verify(refreshToken, "JWT_ACCESS_SECRET");
     const decode = jwt.decode(refreshToken);
@@ -101,19 +102,19 @@ router.post("/refreshToken", async (req, res, next) => {
     const savedRefreshToken = await findRefreshTokenById(payload.jti);
     if (!savedRefreshToken || savedRefreshToken.revoked === true) {
       res.status(401).json({ message: "Unauthorized" });
-      throw new Error("Unauthorized");
+      console.log("Unauthorized");
     }
 
     const hashedToken = hashToken(refreshToken);
     if (hashedToken !== savedRefreshToken.hashedToken) {
       res.status(401);
-      throw new Error("Unauthorized");
+      console.log("Unauthorized");
     }
 
     const user = await findUserById(payload.userId);
     if (!user) {
       res.status(401);
-      throw new Error("Unauthorized");
+      console.log("Unauthorized");
     }
 
     await deleteRefreshToken(savedRefreshToken.id);
@@ -133,8 +134,8 @@ router.post("/refreshToken", async (req, res, next) => {
       refreshToken: newRefreshToken,
     });
   } catch (err) {
+    console.log("error in refresh :", err);
     res.status(400).json({ err });
-    console.log("error :", err);
   }
 });
 

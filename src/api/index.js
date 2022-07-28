@@ -10,15 +10,11 @@ app.use(express.json());
 app.use("/auth", auth);
 
 app.use("/test", (req,res)=>{
-  console.log('🌎 test api log ')
-  res.status(200).json({message :'🌎 test api response ' })
+  console.log('🌎 test api log v2 ')
+  res.status(200).json({message :'🌎 test api response v2' })
 });
 
 
-app.use("/", (req,res)=>{
-  console.log('🌎 test api log ')
-  res.send('Hello world 🌎 ' )
-});
 
 const PORT = process.env.PORT || 5000
 
