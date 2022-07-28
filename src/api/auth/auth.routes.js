@@ -1,12 +1,19 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { generateTokens } from "../../utils/jwt.js";
-import { addRefreshTokenToWhitelist } from "./auth.services.js";
+import {
+  addRefreshTokenToWhitelist,
+  deleteRefreshToken,
+  findRefreshTokenById,
+} from "./auth.services.js";
 import {
   createUserByEmailAndPassword,
   findUserByEmail,
+  findUserById,
 } from "../users/users.services.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { hashToken } from "../../utils/hashToken.js";
 
 const router = express.Router();
 
@@ -19,7 +26,7 @@ router.post("/register", async (req, res, next) => {
       res.status(400);
       throw new Error("You must provide an email and a password.");
     }
-    const existingUser = await fiendUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
       res.status(400);
@@ -76,6 +83,68 @@ router.post("/login", async (req, res, next) => {
       accessToken,
       refreshToken,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/refreshToken", async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      res.status(400);
+      throw new Error("Missing refresh token.");
+    }
+    const payload = jwt.verify(refreshToken, "JWT_ACCESS_SECRET");
+    const decode = jwt.decode(refreshToken);
+    console.log("=== here jti", payload.jti);
+    const savedRefreshToken = await findRefreshTokenById(payload.jti);
+    if (!savedRefreshToken || savedRefreshToken.revoked === true) {
+      res.status(401).json({ message: "Unauthorized" });
+      throw new Error("Unauthorized");
+    }
+
+    const hashedToken = hashToken(refreshToken);
+    if (hashedToken !== savedRefreshToken.hashedToken) {
+      res.status(401);
+      throw new Error("Unauthorized");
+    }
+
+    const user = await findUserById(payload.userId);
+    if (!user) {
+      res.status(401);
+      throw new Error("Unauthorized");
+    }
+
+    await deleteRefreshToken(savedRefreshToken.id);
+    const jti = uuidv4();
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+      user,
+      jti
+    );
+    await addRefreshTokenToWhitelist({
+      jti,
+      refreshToken: newRefreshToken,
+      userId: user.id,
+    });
+
+    res.json({
+      accessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (err) {
+    res.status(400).json({ err });
+    console.log("error :", err);
+  }
+});
+
+// This endpoint is only for demo purpose.
+// Move this logic where you need to revoke the tokens( for ex, on password reset)
+router.post("/revokeRefreshTokens", async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    await revokeTokens(userId);
+    res.json({ message: `Tokens revoked for user with id #${userId}` });
   } catch (err) {
     next(err);
   }

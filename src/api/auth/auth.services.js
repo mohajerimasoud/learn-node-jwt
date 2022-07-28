@@ -12,9 +12,9 @@ export const addRefreshTokenToWhitelist = ({ jti, refreshToken, userId }) => {
 };
 
 export const findRefreshTokenById = (id) => {
-  return prisma.refreshToken.findUnique({
+  return prisma.refreshToken.findFirst({
     where: {
-      id,
+      jti: id,
     },
   });
 };
