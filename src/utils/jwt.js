@@ -10,7 +10,7 @@ export const generateAccessToken = (user) => {
   );
 };
 
-export const generateRefreshToken = (user) => {
+export const generateRefreshToken = (user, jti) => {
   return jwt.sign(
     {
       userId: user.id,

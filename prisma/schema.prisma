@@ -20,6 +20,7 @@ model User{
 model RefreshToken {
     id            String     @id @default(auto()) @map("_id") @db.ObjectId
     hashedToken   String     
+    jti           String     
     userId        String     
     User          User       @relation(fields: [userId] ,references: [id] , onDelete: Cascade )
     revoked       Boolean    @default(false)
