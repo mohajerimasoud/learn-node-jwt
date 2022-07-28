@@ -4,9 +4,9 @@ import { generateTokens } from "../../utils/jwt.js";
 import { addRefreshTokenToWhitelist } from "./auth.services.js";
 import {
   createUserByEmailAndPassword,
-  fiendUserByEmail,
-  findUserById,
+  findUserByEmail,
 } from "../users/users.services.js";
+import bcrypt from "bcrypt";
 
 const router = express.Router();
 
@@ -41,6 +41,43 @@ router.post("/register", async (req, res, next) => {
     // next(err);
     console.log("error in user register ", error);
     res.status(400).json({ message: "error", error });
+  }
+});
+
+router.post("/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400);
+      throw new Error("You must provide an email and a password.");
+    }
+
+    const existingUser = await findUserByEmail(email);
+
+    if (!existingUser) {
+      res.status(403).json({ message: "Invalid login credentials." });
+    }
+
+    const validPassword = await bcrypt.compare(password, existingUser.password);
+    if (!validPassword) {
+      res.status(403);
+      throw new Error("Invalid login credentials.");
+    }
+
+    const jti = uuidv4();
+    const { accessToken, refreshToken } = generateTokens(existingUser, jti);
+    await addRefreshTokenToWhitelist({
+      jti,
+      refreshToken,
+      userId: existingUser.id,
+    });
+
+    res.json({
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    next(err);
   }
 });
 

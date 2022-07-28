@@ -1,7 +1,7 @@
 import bycript from "bcrypt";
 import { prisma } from "../../utils/db.js";
 
-export const fiendUserByEmail = (email) => {
+export const findUserByEmail = (email) => {
   return prisma.user.findUnique({
     where: {
       email,
