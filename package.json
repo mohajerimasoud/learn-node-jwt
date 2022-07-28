@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "nodemon ./src/api/index.js"
+    "dev": "nodemon ./src/api/index.js",
+    "start": "node ./src/api/index.js"
   },
   "dependencies": {
     "@prisma/client": "^4.1.0",
